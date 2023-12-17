@@ -17,7 +17,7 @@ from random import random
 
 class Level(Scene):
     
-    def __init__(self, difficulty: int):
+    def __init__(self, difficulty: int, score: int = 0):
         """
         Creates a level scene with the given difficulty.
         Difficulty must be either 1, 2, or 3 (easy, med, hard.)
@@ -25,14 +25,16 @@ class Level(Scene):
         """
         difficulty = max(min(3, difficulty), 1)
         self.diff = difficulty
+        self.win = False
+        self.score = score
         vert_spread = 0.3
         brick_prob = 0.3
-        ball_speed = 100
+        ball_speed = 75
         if difficulty == 2:
             ball_speed = 150
             brick_prob = 0.5
         elif difficulty == 3:
-            ball_speed = 250
+            ball_speed = 200
             vert_spread = 0.5
             brick_prob = 1
         brick_padding = 1
@@ -54,24 +56,28 @@ class Level(Scene):
         self.paddle = Paddle(paddle_pos, self.ball)
 
     def update(self, delta: float) -> None:
-        self.ball.update(delta)
-        self.paddle.update(delta)
+        for event in pg.event.get(pg.KEYDOWN):
+            if event.key == pg.K_SPACE:
+                self.ball.launch()
+        self.ball.update()
+        self.paddle.update()
         # Brick Collision check
-        colliding_brick = self.ball.get_rect().collideobjects(self.bricks, key=lambda x: x.get_rect())
-        if colliding_brick is not None:
-            if colliding_brick.intact:
-                colliding_brick.hit()
-                # Deal with reflection
-                center_diff = colliding_brick.get_center() - self.ball.get_center()
-                if center_diff.x() * self.ball.velocity.x() > 0 and center_diff.y() * self.ball.velocity.y() > 0:
-                    if center_diff.x() * (Brick.BRICK_HEIGHT/Brick.BRICK_WIDTH) < center_diff.y():
-                        self.ball.velocity.set_x(-self.ball.velocity.x())
-                    else:
-                        self.ball.velocity.set_y(-self.ball.velocity.y())
-                elif center_diff.x() * self.ball.velocity.x() > 0:
-                    self.ball.velocity.set_x(-self.ball.velocity.x())
-                else:
-                    self.ball.velocity.set_y(-self.ball.velocity.y())
+        bounce_x = False
+        bounce_y = False
+        colliding_bricks = self.ball.get_rect().collideobjectsall(self.bricks, key=lambda x: x.get_rect())
+        for colliding_brick in colliding_bricks:
+            if colliding_brick is not None:
+                if colliding_brick.intact:
+                    colliding_brick.hit()
+                    # Deal with reflection
+                    if not self.ball.last_vertical_rect().colliderect(colliding_brick.get_rect()):
+                        bounce_y = True
+                    elif not self.ball.last_horizontal_rect().colliderect(colliding_brick.get_rect()):
+                        bounce_x = True
+        if bounce_x:
+            self.ball.velocity.set_x(-self.ball.velocity.x())
+        if bounce_y:
+            self.ball.velocity.set_y(-self.ball.velocity.y())
         # Paddle Collision check
         if self.ball.get_rect().colliderect(self.paddle.get_rect()):
             self.ball.velocity.set_y(-self.ball.velocity.y())
@@ -85,9 +91,17 @@ class Level(Scene):
 
     def finished(self) -> bool:
         if self.ball.pos.y() > (self.paddle.pos.y() + Paddle.PADDLE_HEIGHT):
+            self.win = False
             return True
-        return False
+        self.win = True
+        for brick in self.bricks:
+            if brick.intact:
+                self.win = False
+                return False
+        return True
 
     def next_scene(self) -> Scene:
+        if self.win:
+            return Level(self.diff, self.score)
         return Level(self.diff)
     

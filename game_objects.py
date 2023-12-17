@@ -25,7 +25,7 @@ class GameObject:
         pass
     
     @abstractmethod
-    def update(self, delta: float):
+    def update(self):
         """Abstract method for updating the object (called once per frame)"""
         pass
     
@@ -81,18 +81,19 @@ class Ball(GameObject):
         rect = (*self.pos.to_tuple(), Ball.BALL_WIDTH, Ball.BALL_HEIGHT)
         pg.draw.rect(screen, self.color, rect)
         
-    def update(self, delta: float):
+    def update(self):
         """Method for updating the ball (called once per frame)"""
         if not self.launched:
             return
+        delta = GameConfig.get_value("frame_delta")
         if self.pos.y() + Ball.BALL_HEIGHT > self.screen_dim[1] and self.velocity.y() > 0:
             self.alive = False
         if self.alive:
             if self.pos.y() <= 0 and self.velocity.y() < 0:
-                self.velocity.set_y(-self.velocity.y() + Ball.__small_delta())
+                self.velocity.set_y(-self.velocity.y())
             if self.pos.x() < 0 and self.velocity.x() < 0 or \
                     self.pos.x() + Ball.BALL_WIDTH >= self.screen_dim[0] and self.velocity.x() > 0:
-                self.velocity.set_x(-self.velocity.x() + Ball.__small_delta())
+                self.velocity.set_x(-self.velocity.x())
             self.velocity.unit()
             self.pos = self.pos + (self.velocity.to_immutable() * delta * self.speed)
     
@@ -141,7 +142,7 @@ class Brick(GameObject):
             pg.draw.rect(screen, self.color, self.rectangle)
             # pg.draw.rect(screen, (0, 0, 0), self.rectangle_outline, width=1)
         
-    def update(self, delta: float):
+    def update(self):
         """Method for updating a brick (which does nothing.)"""
         pass
     
@@ -165,7 +166,8 @@ class Paddle(GameObject):
     def draw(self, screen: pg.Surface):
         pg.draw.rect(screen, self.color, self.get_rect())
 
-    def update(self, delta: float):
+    def update(self):
+        delta = GameConfig.get_value("frame_delta")
         # Key control
         pressed_keys = pg.key.get_pressed()
         if pressed_keys[pg.K_LEFT] or pressed_keys[pg.K_a]:
@@ -176,9 +178,6 @@ class Paddle(GameObject):
             self.pos = self.pos + (self.right_vec * delta)
             if not self.ball.launched:
                 self.ball.velocity.set_x(1)
-        for event in pg.event.get(pg.KEYDOWN):
-            if event.key == pg.K_SPACE:
-                self.ball.launch()
         # Bounds checking
         screen_dim = GameConfig.get_value("screen_dim")
         self.pos = self.pos.clamp((0, screen_dim[0]-Paddle.PADDLE_WIDTH), (0, screen_dim[1]-Paddle.PADDLE_HEIGHT))
