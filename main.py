@@ -10,6 +10,7 @@
 import pygame as pg
 from time import perf_counter
 from game_config import GameConfig
+from asset_manager import AssetManager
 from scene import Scene
 from level import Level
 
@@ -23,6 +24,14 @@ def main():
     window_width = 500
     window_height = window_width * (disp_info.current_h/disp_info.current_w)
     GameConfig.add_value("screen_dim", (window_width, window_height))
+    # Setup assets
+    AssetManager.create()
+    prim_font_large = pg.font.SysFont(pg.font.get_default_font(), 40)
+    prim_font_medium = pg.font.SysFont(pg.font.get_default_font(), 20)
+    prim_font_small = pg.font.SysFont(pg.font.get_default_font(), 10)
+    AssetManager.get_instance().register_font("primary-large", prim_font_large)
+    AssetManager.get_instance().register_font("primary-medium", prim_font_medium)
+    AssetManager.get_instance().register_font("primary-small", prim_font_small)
     # Setup pygame
     screen_surf = pg.display.set_mode(GameConfig.get_value("screen_dim"), flags=pg.SCALED | pg.FULLSCREEN)
     frame_timer = perf_counter()

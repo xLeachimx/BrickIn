@@ -125,8 +125,8 @@ class Vector2D:
         """Simple iterator creation for iterating through the coordinates of the vector."""
         return iter((self.__x, self.__y))
     
-    def __int__(self) -> (int, int):
-        """Overloads the int() function to return an integer tuple."""
+    def __tuple__(self) -> (int, int):
+        """Overloads the tuple() function to return an integer tuple."""
         return int(self.__x), int(self.__y)
     
     def __add__(self, other: Union['Vector2D', tuple[base_num, base_num], list[base_num, base_num]]) -> 'Vector2D':
