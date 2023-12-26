@@ -96,6 +96,10 @@ class Ball(GameObject):
                 self.velocity.set_x(-self.velocity.x())
             self.velocity.unit()
             self.pos = self.pos + (self.velocity.to_immutable() * delta * self.speed)
+
+    def reset(self):
+        self.launched = False
+        self.alive = True
     
     @staticmethod
     def __small_delta():

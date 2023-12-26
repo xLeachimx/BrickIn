@@ -13,10 +13,15 @@ from game_objects import Ball, Brick, Paddle
 from vector_2d import Vector2D
 from game_config import GameConfig
 from random import random
+from asset_manager import AssetManager
+import menus as menu
 
 
 class Level(Scene):
-    
+    EASY = 1
+    MEDIUM = 2
+    HARD = 3
+
     def __init__(self, difficulty: int, score: int = 0):
         """
         Creates a level scene with the given difficulty.
@@ -27,6 +32,7 @@ class Level(Scene):
         self.diff = difficulty
         self.win = False
         self.score = score
+        self.lives = 3
         vert_spread = 0.3
         brick_prob = 0.3
         ball_speed = 75
@@ -39,6 +45,7 @@ class Level(Scene):
             brick_prob = 1
         brick_padding = 1
         scr_dim = GameConfig.get_value("screen_dim")
+        self.font = AssetManager.get_instance().get_font("primary-small")
         self.ball = Ball(Vector2D(scr_dim[0]//2, scr_dim[1] - 100), ball_speed, scr_dim)
         self.bricks = []
         horz_bricks = (scr_dim[0] // (Brick.BRICK_WIDTH+3)) - 1
@@ -68,6 +75,7 @@ class Level(Scene):
         for colliding_brick in colliding_bricks:
             if colliding_brick is not None:
                 if colliding_brick.intact:
+                    self.score += 100
                     colliding_brick.hit()
                     # Deal with reflection
                     if not self.ball.last_vertical_rect().colliderect(colliding_brick.get_rect()):
@@ -82,15 +90,32 @@ class Level(Scene):
         if self.ball.get_rect().colliderect(self.paddle.get_rect()):
             self.ball.velocity.set_y(-self.ball.velocity.y())
             self.ball.pos = self.ball.pos.to_mutable().set_y(self.paddle.pos.y() - (Ball.BALL_HEIGHT+1)).to_immutable()
+        # Fall below paddle check
+        if self.ball.pos.y() + Ball.BALL_HEIGHT > (self.paddle.pos.y() + Paddle.PADDLE_HEIGHT):
+            self.lives -= 1
+            self.ball.reset()
         
     def draw(self, screen: pg.Surface) -> None:
         for brick in self.bricks:
             brick.draw(screen)
         self.ball.draw(screen)
         self.paddle.draw(screen)
+        score_str = f"{self.score:09d}"
+        score = self.font.render(score_str, True, (255, 255, 255))
+        # Display Score
+        screen.blit(score, (screen.get_width() - score.get_width(), 0))
+        padding = screen.get_height()//100
+        lives_str = self.font.render("Lives:", True, (255, 255, 255))
+        ball_size = lives_str.get_height()//4
+        ball_x = padding + ball_size//2
+        ball_y = padding + lives_str.get_height()
+        screen.blit(lives_str, (padding, padding))
+        for i in range(self.lives):
+            pg.draw.rect(screen, (255, 255, 255), (ball_x, ball_y, ball_size, ball_size))
+            ball_x += (3*ball_size)//2
 
     def finished(self) -> bool:
-        if self.ball.pos.y() > (self.paddle.pos.y() + Paddle.PADDLE_HEIGHT):
+        if self.lives <= 0:
             self.win = False
             return True
         self.win = True
@@ -103,5 +128,5 @@ class Level(Scene):
     def next_scene(self) -> Scene:
         if self.win:
             return Level(self.diff, self.score)
-        return Level(self.diff)
+        return menu.LeaderboardAdd(self.score)
     
