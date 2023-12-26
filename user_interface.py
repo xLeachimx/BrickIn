@@ -33,7 +33,7 @@ class UIElement:
 
     def center_horizontal(self, width: int):
         """Changes the Label's position such that it is centered within the given x-dimension"""
-        x_val = (width - self.get_dim[0])//2
+        x_val = (width - self.get_dim()[0])//2
         y_val = self.pos.y()
         self.pos = Vector2D(x_val, y_val)
 
@@ -55,9 +55,10 @@ class UIElement:
 
 
 class Label(UIElement):
-    LARGE_TEXT = 0
-    MEDIUM_TEXT = 1
-    SMALL_TEXT = 2
+    GIANT_TEXT = 0
+    LARGE_TEXT = 1
+    MEDIUM_TEXT = 2
+    SMALL_TEXT = 3
 
     def __init__(self, message: str, text_size: int, color: (int, int, int) = (255, 255, 255)):
         """Constructor for creating a label."""
@@ -65,8 +66,10 @@ class Label(UIElement):
         self.message = message
         self.color = color
         self.font = AssetManager.get_instance().get_font("primary-small")
-        if text_size == Label.LARGE_TEXT:
-            self.font = AssetManager.get_instance().get_font("primary-medium")
+        if text_size == TextBlock.GIANT_TEXT:
+            self.font = AssetManager.get_instance().get_font("primary-giant")
+        elif text_size == Label.LARGE_TEXT:
+            self.font = AssetManager.get_instance().get_font("primary-large")
         elif text_size == Label.MEDIUM_TEXT:
             self.font = AssetManager.get_instance().get_font("primary-medium")
         self.surface = self.font.render(self.message, True, self.color)
@@ -91,12 +94,12 @@ class Label(UIElement):
 
 
 class Button(UIElement):
-    LARGE_TEXT = 0
-    MEDIUM_TEXT = 1
-    SMALL_TEXT = 2
+    GIANT_TEXT = 0
+    LARGE_TEXT = 1
+    MEDIUM_TEXT = 2
+    SMALL_TEXT = 3
 
-    __HIGHLIGHTED_WIDTH = 4
-    __UNHIGHLIGHTED_WIDTH = 1
+    __HIGHLIGHT_COLOR = (255, 0, 0, 255)
 
     def __init__(self, message: str, text_size: int, padding: int, color: (int, int, int) = (255, 255, 255)):
         """Constructor for the button class"""
@@ -105,9 +108,11 @@ class Button(UIElement):
         self.color = color
         self.padding = padding
         self.font = AssetManager.get_instance().get_font("primary-small")
-        if text_size == Label.LARGE_TEXT:
+        if text_size == Button.GIANT_TEXT:
+            self.font = AssetManager.get_instance().get_font("primary-giant")
+        if text_size == Button.LARGE_TEXT:
             self.font = AssetManager.get_instance().get_font("primary-large")
-        elif text_size == Label.MEDIUM_TEXT:
+        elif text_size == Button.MEDIUM_TEXT:
             self.font = AssetManager.get_instance().get_font("primary-medium")
         self.highlighted = False
         self.__render_button()
@@ -120,6 +125,18 @@ class Button(UIElement):
         """Returns the current dimensions of the rendered element."""
         return self.surface.get_width(), self.surface.get_height()
 
+    def highlight(self, status: bool):
+        """Changes the button's highlight status based on the provided value."""
+        if self.highlighted != status:
+            self.highlighted = status
+            self.__render_button()
+
+    def inside(self, loc: (int, int)) -> bool:
+        """Returns true if the provided location is within the button."""
+        x_lim = self.pos.x() + self.get_dim()[0]
+        y_lim = self.pos.y() + self.get_dim()[1]
+        return self.pos.x() <= loc[0] <= x_lim and self.pos.y() <= loc[1] <= y_lim
+
     def __render_button(self):
         """Renders the Button as a surface."""
         text_surf = self.font.render(self.message, True, self.color)
@@ -127,15 +144,16 @@ class Button(UIElement):
         self.surface = pg.Surface(res_dim, flags=pg.SRCALPHA)
         self.surface.blit(text_surf, (self.padding, self.padding))
         if self.highlighted:
-            pg.draw.rect(self.surface, self.color, self.surface.get_rect(), Button.__HIGHLIGHTED_WIDTH)
+            pg.draw.rect(self.surface, Button.__HIGHLIGHT_COLOR, self.surface.get_rect(), 1)
         else:
-            pg.draw.rect(self.surface, self.color, self.surface.get_rect(), Button.__UNHIGHLIGHTED_WIDTH)
+            pg.draw.rect(self.surface, self.color, self.surface.get_rect(), 1)
 
 
 class TextBlock(UIElement):
-    LARGE_TEXT = 0
-    MEDIUM_TEXT = 1
-    SMALL_TEXT = 2
+    GIANT_TEXT = 0
+    LARGE_TEXT = 1
+    MEDIUM_TEXT = 2
+    SMALL_TEXT = 3
 
     __LINE_PADDING = 5
 
@@ -146,9 +164,11 @@ class TextBlock(UIElement):
         self.color = color
         self.width = width
         self.font = AssetManager.get_instance().get_font("primary-small")
-        if text_size == Label.LARGE_TEXT:
-            self.font = AssetManager.get_instance().get_font("primary-medium")
-        elif text_size == Label.MEDIUM_TEXT:
+        if text_size == TextBlock.GIANT_TEXT:
+            self.font = AssetManager.get_instance().get_font("primary-giant")
+        if text_size == TextBlock.LARGE_TEXT:
+            self.font = AssetManager.get_instance().get_font("primary-large")
+        elif text_size == TextBlock.MEDIUM_TEXT:
             self.font = AssetManager.get_instance().get_font("primary-medium")
         self.__render()
 
@@ -199,3 +219,39 @@ class TextBlock(UIElement):
         for text in rendered_text:
             self.surface.blit(text, (0, current_y))
             current_y += text.get_height() + TextBlock.__LINE_PADDING
+
+
+class CompoundUIElement(UIElement):
+    def __init__(self, elements: [UIElement, ...], padding: int = 5):
+        """Constructor for creating a compound UI element."""
+        super().__init__()
+        self.elements = elements
+        self.padding = padding
+        self.__render()
+
+    def each_element(self):
+        """Iterator over each element in the compound UI element."""
+        for element in self.elements:
+            yield element
+
+    def draw(self, screen: pg.Surface):
+        """Draws the element to the given surface at its position."""
+        self.__render()
+        screen.blit(self.surface, tuple(self.pos))
+
+    def get_dim(self) -> (int, int):
+        """Returns the current dimensions of the rendered element."""
+        return self.surface.get_width(), self.surface.get_height()
+
+    def __render(self):
+        width = max(list(map(lambda element: element.get_dim()[0], self.elements)))
+        height = sum(list(map(lambda element: element.get_dim()[1], self.elements)))
+        height += self.padding * (len(self.elements) - 1)
+        self.surface = pg.Surface((width, height))
+        current_y = 0.0
+        for element in self.elements:
+            element.place(Vector2D(0.0, current_y))
+            element.center_horizontal(width)
+            element.draw(self.surface)
+            current_y += element.get_dim()[1] + self.padding
+
