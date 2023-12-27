@@ -15,11 +15,12 @@ from user_interface import Label, Button, CompoundUIElement
 from typing import Type
 import pygame as pg
 from leaderboard import Leaderboard
+from game_config import GameConfig
 
 
 class MainMenu(Scene):
-    __PLAY = 1
     __QUIT = -1
+    __PLAY = 1
     __LEADERBOARD = 2
 
     def __init__(self):
@@ -27,34 +28,46 @@ class MainMenu(Scene):
         self.play_button = Button("Start", Label.LARGE_TEXT, padding=5)
         self.leaderboard_button = Button("High Scores", Label.LARGE_TEXT, padding=5)
         self.quit_button = Button("Exit", Label.LARGE_TEXT, padding=5)
-        self.compound = CompoundUIElement([self.title_label, self.play_button, self.leaderboard_button, self.quit_button])
+        self.btns = [self.play_button, self.leaderboard_button, self.quit_button]
+        self.compound = CompoundUIElement([self.title_label] + self.btns)
         self.active = True
         self.selection = 0
+        self.gamepad_selection = 0
+        self.btns[self.gamepad_selection].highlight(True)
 
     def update(self, delta: float) -> None:
-        for event in pg.event.get(pg.MOUSEBUTTONDOWN):
-            if event.button == pg.BUTTON_LEFT:
-                press_pos = event.pos[0] - self.compound.pos[0], event.pos[1] - self.compound.pos[1]
-                if self.play_button.inside(press_pos):
-                    self.selection = MainMenu.__PLAY
-                elif self.quit_button.inside(press_pos):
-                    self.selection = MainMenu.__QUIT
-                elif self.leaderboard_button.inside(press_pos):
-                    self.selection = MainMenu.__LEADERBOARD
-        for event in pg.event.get(pg.MOUSEMOTION):
-            mouse_pos = event.pos[0] - self.compound.pos[0], event.pos[1] - self.compound.pos[1]
-            if self.play_button.inside(mouse_pos):
-                self.play_button.highlight(True)
-            else:
-                self.play_button.highlight(False)
-            if self.quit_button.inside(mouse_pos):
-                self.quit_button.highlight(True)
-            else:
-                self.quit_button.highlight(False)
-            if self.leaderboard_button.inside(mouse_pos):
-                self.leaderboard_button.highlight(True)
-            else:
-                self.leaderboard_button.highlight(False)
+        if GameConfig.get_value("controller") == "KEYBOARD":
+            for event in pg.event.get(pg.MOUSEBUTTONDOWN):
+                if event.button == pg.BUTTON_LEFT:
+                    press_pos = event.pos[0] - self.compound.pos[0], event.pos[1] - self.compound.pos[1]
+                    if self.play_button.inside(press_pos):
+                        self.selection = MainMenu.__PLAY
+                    elif self.quit_button.inside(press_pos):
+                        self.selection = MainMenu.__QUIT
+                    elif self.leaderboard_button.inside(press_pos):
+                        self.selection = MainMenu.__LEADERBOARD
+            for event in pg.event.get(pg.MOUSEMOTION):
+                mouse_pos = event.pos[0] - self.compound.pos[0], event.pos[1] - self.compound.pos[1]
+                for btn in self.btns:
+                    if btn.inside(mouse_pos):
+                        btn.highlight(True)
+                    else:
+                        btn.highlight(False)
+        elif GameConfig.get_value("controller") == "GAMEPAD":
+            for event in pg.event.get(pg.JOYBUTTONDOWN):
+                if event.button == GameConfig.get_value("A"):
+                    self.selection = self.gamepad_selection + 1
+            for event in pg.event.get(pg.JOYAXISMOTION):
+                if event.axis == GameConfig.get_value("Y-axis"):
+                    y_axis = round(event.value)
+                    last_selection = self.gamepad_selection
+                    if y_axis == 1:
+                        self.gamepad_selection += 1
+                    elif y_axis == -1:
+                        self.gamepad_selection -= 1
+                    self.gamepad_selection = self.gamepad_selection % len(self.btns)
+                    self.btns[last_selection].highlight(False)
+                    self.btns[self.gamepad_selection].highlight(True)
 
     def draw(self, screen: pg.Surface) -> None:
         self.compound.center((screen.get_width(), screen.get_height()))
@@ -84,24 +97,42 @@ class DifficultyMenu(Scene):
         self.compound = CompoundUIElement(self.btns)
         self.active = True
         self.selection = 0
+        self.gamepad_selection = 0
+        self.btns[self.gamepad_selection].highlight(True)
 
     def update(self, delta: float) -> None:
-        for event in pg.event.get(pg.MOUSEBUTTONDOWN):
-            if event.button == pg.BUTTON_LEFT:
-                press_pos = event.pos[0] - self.compound.pos[0], event.pos[1] - self.compound.pos[1]
-                if self.easy_btn.inside(press_pos):
-                    self.selection = DifficultyMenu.__EASY
-                elif self.med_btn.inside(press_pos):
-                    self.selection = DifficultyMenu.__MEDIUM
-                elif self.hard_btn.inside(press_pos):
-                    self.selection = DifficultyMenu.__HARD
-        for event in pg.event.get(pg.MOUSEMOTION):
-            mouse_pos = event.pos[0] - self.compound.pos[0], event.pos[1] - self.compound.pos[1]
-            for btn in self.btns:
-                if btn.inside(mouse_pos):
-                    btn.highlight(True)
-                else:
-                    btn.highlight(False)
+        if GameConfig.get_value("controller") == "KEYBOARD":
+            for event in pg.event.get(pg.MOUSEBUTTONDOWN):
+                if event.button == pg.BUTTON_LEFT:
+                    press_pos = event.pos[0] - self.compound.pos[0], event.pos[1] - self.compound.pos[1]
+                    if self.easy_btn.inside(press_pos):
+                        self.selection = DifficultyMenu.__EASY
+                    elif self.med_btn.inside(press_pos):
+                        self.selection = DifficultyMenu.__MEDIUM
+                    elif self.hard_btn.inside(press_pos):
+                        self.selection = DifficultyMenu.__HARD
+            for event in pg.event.get(pg.MOUSEMOTION):
+                mouse_pos = event.pos[0] - self.compound.pos[0], event.pos[1] - self.compound.pos[1]
+                for btn in self.btns:
+                    if btn.inside(mouse_pos):
+                        btn.highlight(True)
+                    else:
+                        btn.highlight(False)
+        elif GameConfig.get_value("controller") == "GAMEPAD":
+            for event in pg.event.get(pg.JOYBUTTONDOWN):
+                if event.button == GameConfig.get_value("A"):
+                    self.selection = self.gamepad_selection + 1
+            for event in pg.event.get(pg.JOYAXISMOTION):
+                if event.axis == GameConfig.get_value("Y-axis"):
+                    y_axis = round(event.value)
+                    last_selection = self.gamepad_selection
+                    if y_axis == 1:
+                        self.gamepad_selection += 1
+                    elif y_axis == -1:
+                        self.gamepad_selection -= 1
+                    self.gamepad_selection = self.gamepad_selection % len(self.btns)
+                    self.btns[last_selection].highlight(False)
+                    self.btns[self.gamepad_selection].highlight(True)
 
     def draw(self, screen: pg.Surface) -> None:
         self.compound.center((screen.get_width(), screen.get_height()))
@@ -121,6 +152,8 @@ class DifficultyMenu(Scene):
 
 
 class LeaderboardAdd(Scene):
+    __BLINK_COUNT = 30
+
     def __init__(self, score: int):
         self.name = ["A", "A", "A"]
         self.score = score
@@ -129,31 +162,67 @@ class LeaderboardAdd(Scene):
         self.label_str = f"{name_str}     {self.score:09d}"
         self.label = Label(self.label_str, Label.LARGE_TEXT)
         self.underline = 0
+        self.blink_counter = LeaderboardAdd.__BLINK_COUNT
+        self.blink = False
 
     def update(self, delta: float) -> None:
-        for event in pg.event.get(pg.KEYDOWN):
-            if event.key == pg.K_DOWN:
-                alt = chr(ord(self.name[self.underline]) - 1)
-                if self.name[self.underline] == "A":
-                    alt = "Z"
-                self.name[self.underline] = alt
-            elif event.key == pg.K_UP:
-                alt = chr(ord(self.name[self.underline]) + 1)
-                if self.name[self.underline] == "Z":
-                    alt = "A"
-                self.name[self.underline] = alt
-            elif event.key == pg.K_LEFT:
-                self.underline -= 1
-                self.underline = self.underline % 3
-            elif event.key == pg.K_RIGHT:
-                self.underline += 1
-                self.underline = self.underline % 3
-            elif event.key == pg.K_RETURN:
-                self.active = False
-                Leaderboard.register("".join(self.name), self.score)
+        if GameConfig.get_value("controller") == "KEYBOARD":
+            for event in pg.event.get(pg.KEYDOWN):
+                if event.key == pg.K_DOWN:
+                    alt = chr(ord(self.name[self.underline]) - 1)
+                    if self.name[self.underline] == "A":
+                        alt = "Z"
+                    self.name[self.underline] = alt
+                elif event.key == pg.K_UP:
+                    alt = chr(ord(self.name[self.underline]) + 1)
+                    if self.name[self.underline] == "Z":
+                        alt = "A"
+                    self.name[self.underline] = alt
+                elif event.key == pg.K_LEFT:
+                    self.underline -= 1
+                    self.underline = self.underline % 3
+                elif event.key == pg.K_RIGHT:
+                    self.underline += 1
+                    self.underline = self.underline % 3
+                elif event.key == pg.K_RETURN:
+                    self.active = False
+                    Leaderboard.register("".join(self.name), self.score)
+        elif GameConfig.get_value("controller") == "GAMEPAD":
+            for event in pg.event.get(pg.JOYBUTTONDOWN):
+                if event.button == GameConfig.get_value("A"):
+                    self.active = False
+                    Leaderboard.register("".join(self.name), self.score)
+            for event in pg.event.get(pg.JOYAXISMOTION):
+                if event.axis == GameConfig.get_value("Y-axis"):
+                    axis = round(event.value)
+                    if axis == -1:
+                        alt = chr(ord(self.name[self.underline]) + 1)
+                        if self.name[self.underline] == "Z":
+                            alt = "A"
+                        self.name[self.underline] = alt
+                    elif axis == 1:
+                        alt = chr(ord(self.name[self.underline]) - 1)
+                        if self.name[self.underline] == "A":
+                            alt = "Z"
+                        self.name[self.underline] = alt
+                elif event.axis == GameConfig.get_value("X-axis"):
+                    axis = round(event.value)
+                    if axis == 1:
+                        self.underline += 1
+                    elif axis == -1:
+                        self.underline -= 1
+                    self.underline = self.underline % len(self.name)
 
     def draw(self, screen: pg.Surface) -> None:
+        temp = self.name[self.underline]
+        if self.blink:
+            self.name[self.underline] = "_"
+        self.blink_counter -= 1
+        if self.blink_counter <= 0:
+            self.blink_counter = LeaderboardAdd.__BLINK_COUNT
+            self.blink = not self.blink
         name_str = "".join(self.name)
+        self.name[self.underline] = temp
         self.label_str = f"{name_str}     {self.score:09d}"
         self.label = Label(self.label_str, Label.LARGE_TEXT)
         self.label.center((screen.get_width(), screen.get_height()))
@@ -172,13 +241,18 @@ class LeaderboardDisplay(Scene):
         self.active = True
         for name, score in Leaderboard.get_scores():
             scr_str = f"{name}     {score:09d}"
-            self.labels.append(Label(scr_str, Label.MEDIUM_TEXT))
+            self.labels.append(Label(scr_str, Label.SMALL_TEXT))
         self.compound = CompoundUIElement(self.labels)
 
     def update(self, delta: float) -> None:
-        for event in pg.event.get(pg.KEYDOWN):
-            if event.key == pg.K_ESCAPE:
-                self.active = False
+        if GameConfig.get_value("controller") == "KEYBOARD":
+            for event in pg.event.get(pg.KEYDOWN):
+                if event.key == pg.K_ESCAPE:
+                    self.active = False
+        elif GameConfig.get_value("controller") == "GAMEPAD":
+            for event in pg.event.get(pg.JOYBUTTONDOWN):
+                if event.button == GameConfig.get_value("B"):
+                    self.active = False
 
     def draw(self, screen: pg.Surface) -> None:
         self.compound.center((screen.get_width(), screen.get_height()))

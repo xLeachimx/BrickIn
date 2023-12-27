@@ -47,7 +47,7 @@ class Leaderboard:
     def __init__(self):
         self.scores = []
         if exists(Leaderboard.__FILE) and isfile(Leaderboard.__FILE):
-            with open(Leaderboard.__FILE) as fin:
+            with open(Leaderboard.__FILE, 'r') as fin:
                 for line in fin:
                     line = line.strip()
                     if line != "":
@@ -80,7 +80,7 @@ class Leaderboard:
     def close(self):
         """Closes the leaderboard by writing to its file if needed."""
         if self.changed:
-            with open(Leaderboard.__FILE) as fout:
+            with open(Leaderboard.__FILE, 'w') as fout:
                 for name, score in self.scores:
                     print(f"{name}, score", file=fout)
             self.changed = False

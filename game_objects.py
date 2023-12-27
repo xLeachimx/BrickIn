@@ -173,15 +173,28 @@ class Paddle(GameObject):
     def update(self):
         delta = GameConfig.get_value("frame_delta")
         # Key control
-        pressed_keys = pg.key.get_pressed()
-        if pressed_keys[pg.K_LEFT] or pressed_keys[pg.K_a]:
-            self.pos = self.pos + (self.left_vec * delta)
-            if not self.ball.launched:
-                self.ball.velocity.set_x(-1)
-        if pressed_keys[pg.K_RIGHT] or pressed_keys[pg.K_d]:
-            self.pos = self.pos + (self.right_vec * delta)
-            if not self.ball.launched:
-                self.ball.velocity.set_x(1)
+        if GameConfig.get_value("controller") == "KEYBOARD":
+            pressed_keys = pg.key.get_pressed()
+            if pressed_keys[pg.K_LEFT] or pressed_keys[pg.K_a]:
+                self.pos = self.pos + (self.left_vec * delta)
+                if not self.ball.launched:
+                    self.ball.velocity.set_x(-1)
+            if pressed_keys[pg.K_RIGHT] or pressed_keys[pg.K_d]:
+                self.pos = self.pos + (self.right_vec * delta)
+                if not self.ball.launched:
+                    self.ball.velocity.set_x(1)
+        elif GameConfig.get_value("controller") == "GAMEPAD":
+            joystick = GameConfig.get_value("gamepad")
+            x_axis = joystick.get_axis(GameConfig.get_value("X-axis"))
+            x_axis = round(x_axis)
+            if x_axis == -1:
+                self.pos = self.pos + (self.left_vec * delta)
+                if not self.ball.launched:
+                    self.ball.velocity.set_x(-1)
+            elif x_axis == 1:
+                self.pos = self.pos + (self.right_vec * delta)
+                if not self.ball.launched:
+                    self.ball.velocity.set_x(1)
         # Bounds checking
         screen_dim = GameConfig.get_value("screen_dim")
         self.pos = self.pos.clamp((0, screen_dim[0]-Paddle.PADDLE_WIDTH), (0, screen_dim[1]-Paddle.PADDLE_HEIGHT))

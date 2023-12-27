@@ -20,6 +20,7 @@ from leaderboard import Leaderboard
 def main():
     pg.init()
     # Setup some baseline info.
+    GameConfig.create()
     GameConfig.add_value("fps", 60)
     GameConfig.add_value("frame_delta", 1/GameConfig.get_value("fps"))
     disp_info = pg.display.Info()

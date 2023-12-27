@@ -15,6 +15,7 @@ from game_config import GameConfig
 from random import random
 from asset_manager import AssetManager
 import menus as menu
+from user_interface import Label
 
 
 class Level(Scene):
@@ -33,6 +34,7 @@ class Level(Scene):
         self.win = False
         self.score = score
         self.lives = 3
+        self.paused = False
         vert_spread = 0.3
         brick_prob = 0.3
         ball_speed = 75
@@ -61,39 +63,51 @@ class Level(Scene):
                     self.bricks.append(Brick(Vector2D(x, y)))
         paddle_pos = Vector2D((scr_dim[0]-Paddle.PADDLE_WIDTH)//2, scr_dim[1] - 3*Paddle.PADDLE_HEIGHT)
         self.paddle = Paddle(paddle_pos, self.ball)
+        # Pause label
+        self.pause_label = Label("PAUSED", Label.GIANT_TEXT, (250, 0, 250))
 
     def update(self, delta: float) -> None:
-        for event in pg.event.get(pg.KEYDOWN):
-            if event.key == pg.K_SPACE:
-                self.ball.launch()
-        self.ball.update()
-        self.paddle.update()
-        # Brick Collision check
-        bounce_x = False
-        bounce_y = False
-        colliding_bricks = self.ball.get_rect().collideobjectsall(self.bricks, key=lambda x: x.get_rect())
-        for colliding_brick in colliding_bricks:
-            if colliding_brick is not None:
-                if colliding_brick.intact:
-                    self.score += 100
-                    colliding_brick.hit()
-                    # Deal with reflection
-                    if not self.ball.last_vertical_rect().colliderect(colliding_brick.get_rect()):
-                        bounce_y = True
-                    elif not self.ball.last_horizontal_rect().colliderect(colliding_brick.get_rect()):
-                        bounce_x = True
-        if bounce_x:
-            self.ball.velocity.set_x(-self.ball.velocity.x())
-        if bounce_y:
-            self.ball.velocity.set_y(-self.ball.velocity.y())
-        # Paddle Collision check
-        if self.ball.get_rect().colliderect(self.paddle.get_rect()):
-            self.ball.velocity.set_y(-self.ball.velocity.y())
-            self.ball.pos = self.ball.pos.to_mutable().set_y(self.paddle.pos.y() - (Ball.BALL_HEIGHT+1)).to_immutable()
-        # Fall below paddle check
-        if self.ball.pos.y() + Ball.BALL_HEIGHT > (self.paddle.pos.y() + Paddle.PADDLE_HEIGHT):
-            self.lives -= 1
-            self.ball.reset()
+        if GameConfig.get_value("controller") == "KEYBOARD":
+            for event in pg.event.get(pg.KEYDOWN):
+                if event.key == pg.K_SPACE:
+                    self.ball.launch()
+                elif event.key == pg.K_ESCAPE:
+                    self.paused = not self.paused
+        elif GameConfig.get_value("controller") == "GAMEPAD":
+            for event in pg.event.get(pg.JOYBUTTONDOWN):
+                if event.button == GameConfig.get_value("A"):
+                    self.ball.launch()
+                elif event.button == GameConfig.get_value("START"):
+                    self.paused = not self.paused
+        if not self.paused:
+            self.ball.update()
+            self.paddle.update()
+            # Brick Collision check
+            bounce_x = False
+            bounce_y = False
+            colliding_bricks = self.ball.get_rect().collideobjectsall(self.bricks, key=lambda x: x.get_rect())
+            for colliding_brick in colliding_bricks:
+                if colliding_brick is not None:
+                    if colliding_brick.intact:
+                        self.score += 100
+                        colliding_brick.hit()
+                        # Deal with reflection
+                        if not self.ball.last_vertical_rect().colliderect(colliding_brick.get_rect()):
+                            bounce_y = True
+                        elif not self.ball.last_horizontal_rect().colliderect(colliding_brick.get_rect()):
+                            bounce_x = True
+            if bounce_x:
+                self.ball.velocity.set_x(-self.ball.velocity.x())
+            if bounce_y:
+                self.ball.velocity.set_y(-self.ball.velocity.y())
+            # Paddle Collision check
+            if self.ball.get_rect().colliderect(self.paddle.get_rect()):
+                self.ball.velocity.set_y(-self.ball.velocity.y())
+                self.ball.pos = self.ball.pos.to_mutable().set_y(self.paddle.pos.y() - (Ball.BALL_HEIGHT+1)).to_immutable()
+            # Fall below paddle check
+            if self.ball.pos.y() + Ball.BALL_HEIGHT > (self.paddle.pos.y() + Paddle.PADDLE_HEIGHT):
+                self.lives -= 1
+                self.ball.reset()
         
     def draw(self, screen: pg.Surface) -> None:
         for brick in self.bricks:
@@ -113,6 +127,9 @@ class Level(Scene):
         for i in range(self.lives):
             pg.draw.rect(screen, (255, 255, 255), (ball_x, ball_y, ball_size, ball_size))
             ball_x += (3*ball_size)//2
+        if self.paused:
+            self.pause_label.center((screen.get_width(), screen.get_height()))
+            self.pause_label.draw(screen)
 
     def finished(self) -> bool:
         if self.lives <= 0:
